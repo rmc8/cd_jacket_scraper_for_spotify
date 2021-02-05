@@ -1,11 +1,11 @@
-import re
 import os
-from time import sleep
 import pathlib
-from typing import List, Tuple, Optional
+import re
+from time import sleep
+from typing import List, Optional, Tuple
 
-import requests
 import PySimpleGUI as sg
+import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
@@ -21,17 +21,18 @@ def web_driver(headless: bool = True) -> webdriver:
 
 def sel_input_dir():
     layout = [
-        [sg.Text("ディレクトリ"), sg.InputText(key="ret"),
-        [sg.FolderBrowse(key="dir")],
+        [sg.Text("ディレクトリ"), sg.InputText(key="ret"), sg.FolderBrowse(key="dir")],
         [sg.Submit(), sg.Exit()],
     ]
-    window= sg.Window("ディレクトリ選択", layout)
+    window = sg.Window("Input", layout)
     while True:
-        event, values= window.read()
-        if event in (None, sg.WIN_CLOSED, "Exit"):
-            ret= None
-        elif event == "Submit":
-            ret= values["ret"]
+        event, values = window.read()
+        if event == "Submit":
+            ret = values["ret"]
+            break
+        elif event in (sg.WINDOW_CLOSED, "Exit"):
+            ret = None
+            break
     window.close()
     return ret
 
@@ -63,11 +64,11 @@ def get_asin(url_list: str) -> Optional[str]:
 
 
 def main():
+    search_dir = sel_input_dir()
+    if search_dir is None:
+        exit()
     driver= web_driver()
     try:
-        search_dir = sel_input_dir()
-        if search_dir is None:
-            exit()
         for path, artist, name in get_cd_info(search_dir):
             img_path= f"{path}\\{name}.jpg"
             if os.path.exists(img_path):
