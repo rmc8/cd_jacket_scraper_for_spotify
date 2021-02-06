@@ -75,7 +75,7 @@ def main():
         for try_num in range(2):
             sleep(1)
             album = re.sub(r"\s*(\[|\(|（|【){1}.*(\]|\)|）|】)", "", album)
-            album = re.sub(r"(\s*Disk|DISK){1}\s*[0-9]{1,2}", "", album)
+            album = re.sub(r"\s*(Disk|DISK){1}(\s|\-)*[0-9]{1,2}", "", album)
             query = album if try_num else f'"{artist}"&"{album}"'
             q_type = "album" if try_num else "artist,album"
             res = sp.search(query, limit=1, offset=0, type=q_type)
