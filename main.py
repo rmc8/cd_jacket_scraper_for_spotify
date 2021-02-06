@@ -9,6 +9,8 @@ import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
+import spotipy
+from spotipy.oauth2 import SpotifyClientCredentials
 
 
 def web_driver(headless: bool = True) -> webdriver:
@@ -21,7 +23,8 @@ def web_driver(headless: bool = True) -> webdriver:
 
 def sel_input_dir():
     layout = [
-        [sg.Text("ディレクトリ"), sg.InputText(key="ret"), sg.FolderBrowse(key="dir")],
+        [sg.Text("ディレクトリ"), sg.InputText(key="ret"),
+         sg.FolderBrowse(key="dir")],
         [sg.Submit(), sg.Exit()],
     ]
     window = sg.Window("Input", layout)
@@ -47,16 +50,15 @@ def get_cd_info(path: str) -> Tuple[str, str, str]:
     """
     for root, dirs, _ in os.walk(path):
         if not dirs:
-            p= pathlib.Path(root)
+            p = pathlib.Path(root)
             yield root, p.parent.name, p.name
         for dir in dirs:
             get_cd_info(f"{path}\\{dir}")
 
 
-
 def get_asin(url_list: str) -> Optional[str]:
     for url in url_list:
-        match= re.findall(
+        match = re.findall(
             r"^(?:https://.*([0-9B]{1}[0-9A-Z]{9}))", str(url), flags=re.VERBOSE)
         if match:
             return match[0]
@@ -67,22 +69,22 @@ def main():
     search_dir = sel_input_dir()
     if search_dir is None:
         exit()
-    driver= web_driver()
+    driver = web_driver()
     try:
         for path, artist, name in get_cd_info(search_dir):
-            img_path= f"{path}\\{name}.jpg"
+            img_path = f"{path}\\{name}.jpg"
             if os.path.exists(img_path):
                 continue
             sleep(1)
-            url= f"https://www.google.com/search?q={artist}+{name}+amazon"
+            url = f"https://www.google.com/search?q={artist}+{name}+amazon"
             driver.get(url)
-            urls= [e.get_attribute("href")
+            urls = [e.get_attribute("href")
                     for e in driver.find_elements_by_tag_name("a")]
-            asin= get_asin(urls)
+            asin = get_asin(urls)
             if asin is None:
                 continue
-            img_url= f"http://images-jp.amazon.com/images/P/{asin}.6.LZZZZZZZ.jpg"
-            res= requests.get(img_url)
+            img_url = f"http://images-jp.amazon.com/images/P/{asin}.6.LZZZZZZZ.jpg"
+            res = requests.get(img_url)
             with open(img_path, "wb") as img_file:
                 img_file.write(res.content)
             if os.path.getsize(img_path) < 100:
@@ -91,5 +93,32 @@ def main():
         driver.quit()
 
 
+def spotify_auth():
+    CLIENT_ID = os.environ["SPOTIFY_CLIENT_ID"]
+    CLIENT_SECRET = os.environ["SPOTIFY_SECRET_ID"]
+    client_credentials_manager = spotipy.oauth2.SpotifyClientCredentials(
+        CLIENT_ID, CLIENT_SECRET
+    )
+    return spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+
+def _get_img_url(jsn):
+    try:
+        return jsn[0]["images"][0]["url"]
+    except TypeError:
+        return None
+    except IndexError:
+        return None
+
+def _test():
+    sp = spotify_auth()
+    artist = "96猫"
+    album = "嘘の火花"
+    res = sp.search(f'"{artist}"&"{album}"', limit=1, offset=0, type="artist,album")
+    items = res["albums"]["items"]
+    if (img_url := _get_img_url(items)) is None:
+        print("hoge")
+    print(img_url)
+
+
 if __name__ == "__main__":
-    main()
+    _test()
