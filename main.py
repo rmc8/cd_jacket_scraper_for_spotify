@@ -81,8 +81,9 @@ def main():
             res = sp.search(query, limit=1, offset=0, type=q_type)
             items = res["albums"]["items"]
             if (img_url := _get_img_url(items)) is None:
-                print(f"[SKIP] {img_path}")
-                break
+                if try_num:
+                    print(f"[SKIP] {img_path}")
+                continue
             res = requests.get(img_url)
             with open(img_path, "wb") as img_file:
                 img_file.write(res.content)
